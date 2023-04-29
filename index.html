@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>My Webpage</title>
+  </head>
+  <style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap');
+
+*,
+::after,
+::before {
+    border: 0;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    outline: none;
+}
+
+html {
+    font-size: 62.5%;
+}
+
+body {
+    font-family: 'Nunito', sans-serif;
+    background-color: #938455;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100vw;
+}
+
+canvas {
+    box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+    width: 600px;
+    height: 350px;
+    border: 2px solid #DBBC5F;
+}
+
+.score {
+    font-size: 2rem;
+    margin-bottom: 1.5rem;
+    font-weight: 800;
+    color: #f6c8c4;
+
+}
+
+.message {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    font-weight: 800;
+    color: #d0e392;
+    opacity: 0;
+}
+
+.score span {
+    color: #d0e392;
+    margin-left: .5rem;
+}
+
+.buttons-ctn {
+    display: flex;
+    gap: 2rem;
+    margin-top: 3rem;
+}
+
+button {
+    cursor: pointer;
+    font-size: 1.8rem;
+    padding: 1.5rem 2rem;
+    border-radius: 10px;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 600;
+    background-color: #CABA8C;
+    color: #6e5b20;
+    border: none;
+    transition: background-color 0.3s ease, color 0.5s ease;
+    box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+}
+
+button:hover {
+    background-color: #DBBC5F;
+    color: #ffffff;
+}
+
+button.inactive {
+    pointer-events: none;
+    background-color: rgb(202, 186, 140, 0.3);
+    color: rgba(110, 91, 32, 0.3);
+}
+
+@media screen and (min-width:500px) {
+    canvas {
+        color: #f6c8c4;
+    }
+}
+  </style>
+<body>
+    <p class="score">Score: <span id="score"></span></p>
+    <p class="message">GAME OVER!</p>
+    <canvas id="game-board"></canvas>
+    <div class="buttons-ctn">
+        <button class="btn-play" id="play">Play</button>
+        <button class="btn-pause" id="pause">Pause</button>
+        <button class="btn-reset" id="reset">Reset</button>
+    </div>
+</body>
+<script>const canvasElement = document.querySelector("#game-board");
+const context = canvasElement.getContext("2d");
+const scoreElement = document.querySelector('#score');
+const messageElement = document.querySelector('.message');
+const playButton = document.querySelector('#play');
+const pauseButton = document.querySelector('#pause');
+const resetButton = document.querySelector('#reset');
+const snakeSize = 5;
+const gridSize = 5;
+
+let snake = [];
+let food = {};
+let score = 0;
+let direction = '';
+let gameLoopInterval = 0;
+let isRunningGame = false;
+
+function startGame() {
+    if (!isRunningGame) {
+        score = 0;
+        direction = "right";
+    };
+
+    document.addEventListener("keydown", changeDirection);
+    gameLoopInterval = setInterval(gameLoop, 1000 / 10);
+    resetButton.classList.add('inactive');
+    pauseButton.classList.remove('inactive');
+    playButton.classList.add('inactive');
+    gameLoop();
+};
+
+function createSnake() {
+
+    // starts snake from the center
+    const centerX = Math.floor(canvasElement.width / gridSize / 2);
+    const centerY = Math.floor(canvasElement.height / gridSize / 2);
+
+    for (let i = 0; i < snakeSize; i++) {
+        snake.push({ x: centerX - i, y: centerY });
+    };
+};
+
+function createFood() {
+    food = {
+        x: Math.floor(Math.random() * (canvasElement.width / gridSize)),
+        y: Math.floor(Math.random() * (canvasElement.height / gridSize)),
+    };
+};
+
+function drawSnake() {
+    snake.forEach(function (segment) {
+        context.fillStyle = '#d0e392';
+        context.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize, gridSize);
+    });
+};
+
+function drawFood() {
+    context.fillStyle = "#f6c8c4";
+    context.fillRect(food.x * gridSize, food.y * gridSize, gridSize, gridSize);
+};
+
+function changeDirection(e) {
+    const downKeyCode = 40;
+    const upKeyCode = 38;
+    const rightKeyCode = 39;
+    const leftKeyCode = 37;
+
+    if (e.keyCode === leftKeyCode && direction !== "right") {
+        direction = "left";
+    } else if (e.keyCode === upKeyCode && direction !== "down") {
+        direction = "up";
+    } else if (e.keyCode === rightKeyCode && direction !== "left") {
+        direction = "right";
+    } else if (e.keyCode === downKeyCode && direction !== "up") {
+        direction = "down";
+    };
+};
+
+function clearCanvas() {
+    context.clearRect(0, 0, canvasElement.width, canvasElement.height);
+};
+
+// Move the snake's head according to the direction and add it to the front of the snake array.
+function moveSnake() {
+    const head = {
+        x: snake[0].x + (direction === "right" ? 1 : direction === "left" ? -1 : 0),
+        y: snake[0].y + (direction === "down" ? 1 : direction === "up" ? -1 : 0),
+    };
+
+    snake.unshift(head);
+    // Check if snake has eaten food or pop last segment
+    if (head.x === food.x && head.y === food.y) {
+        score += 5;
+        createFood();
+    } else {
+        snake.pop();
+    }
+    scoreElement.innerHTML = score;
+};
+
+function gameLoop() {
+    clearCanvas();
+    drawSnake();
+    drawFood();
+    moveSnake();
+    checkCollision();
+};
+
+function checkCollision() {
+
+    if (snake[0].x < 0 || snake[0].x >= canvasElement.width / gridSize || snake[0].y < 0 || snake[0].y >= canvasElement.height / gridSize) {
+        gameOver();
+    };
+
+    for (let i = 1; i < snake.length; i++) {
+        if (snake[0].x === snake[i].x && snake[0].y === snake[i].y) {
+            gameOver();
+        };
+    };
+};
+
+function pauseGame() {
+    isRunningGame = true;
+    pauseButton.classList.add('inactive');
+    resetButton.classList.remove('inactive');
+    playButton.classList.remove('inactive');
+    clearInterval(gameLoopInterval);
+};
+
+function gameOver() {
+    messageElement.style.opacity = '1';
+    playButton.classList.add('inactive');
+    pauseButton.classList.add('inactive');
+    resetButton.classList.remove('inactive');
+    clearInterval(gameLoopInterval);
+}
+
+function resetGame() {
+    snake = [];
+    food = {};
+    direction = '';
+    gameLoopInterval = 0;
+    isRunningGame = false;
+    scoreElement.innerHTML = 0;
+    messageElement.style.opacity = '0';
+    playButton.classList.remove('inactive');
+    resetButton.classList.add('inactive');
+    playButton.addEventListener('click', startGame);
+    pauseButton.addEventListener('click', pauseGame);
+
+    clearCanvas();
+    createSnake();
+    createFood();
+    drawSnake();
+    drawFood();
+};
+
+playButton.addEventListener('click', startGame);
+pauseButton.addEventListener('click', pauseGame);
+resetButton.addEventListener('click', resetGame);
+
+window.addEventListener('DOMContentLoaded', function () {
+    scoreElement.innerHTML = score;
+    resetButton.classList.add('inactive');
+    pauseButton.classList.add('inactive');
+    createSnake();
+    createFood();
+    drawSnake();
+    drawFood();
+});</script>
+</html>
